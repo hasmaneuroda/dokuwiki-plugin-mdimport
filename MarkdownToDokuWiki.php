@@ -106,6 +106,15 @@ class MarkdownToDokuWikiConverter
 
             // Code block handling
             if (str_starts_with(trim($line), '```')) {
+                /*
+                 * Flush any pending paragraph before opening a fenced code block.
+                 * Otherwise text directly above the code fence is emitted only
+                 * after the code block, which changes the article order.
+                 */
+                if (!$this->inCodeBlock) {
+                    $this->flushParagraph($output);
+                }
+
                 $this->handleCodeBlock($line, $output);
                 $i++;
                 continue;
@@ -118,6 +127,13 @@ class MarkdownToDokuWikiConverter
 
             // Table detection
             if ($this->isTableStart($line, $nextLine)) {
+                /*
+                 * Flush any pending paragraph before rendering a table, for the
+                 * same reason as fenced code blocks: block-level elements must
+                 * not be emitted before preceding buffered paragraph text.
+                 */
+                $this->flushParagraph($output);
+
                 $this->parseTable($lines, $i);
                 $output[] = $this->renderTable();
                 continue;
